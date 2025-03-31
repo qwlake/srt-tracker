@@ -1,3 +1,4 @@
+from selenium.webdriver.support import expected_conditions as EC
 from typing import List
 
 from selenium import webdriver
@@ -5,6 +6,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.remote.webelement import WebElement
 from dotenv import load_dotenv
+from selenium.webdriver.support.wait import WebDriverWait
 
 from log import logger
 
@@ -42,6 +44,10 @@ def get_train_schedules(
     driver = get_driver(url)
 
     try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, '//*[@id="search_top_tag"]/input'))
+        )
+
         driver.find_element(By.ID, 'dptRsStnCdNm').clear()
         driver.find_element(By.ID, 'dptRsStnCdNm').send_keys(dep)  # 출발역 입력
 
@@ -66,8 +72,11 @@ def get_train_schedules(
 
         driver.find_element(By.XPATH, '//*[@id="search_top_tag"]/input').click()  # 기차표 조회
 
-        available_seats = []
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, '//*[@id="result-form"]/fieldset/div[6]/table/tbody/tr'))
+        )
 
+        available_seats = []
         seats = driver.find_elements(By.XPATH, '//*[@id="result-form"]/fieldset/div[6]/table/tbody/tr')
         logger.debug(f"searched seats: {len(seats)}")
         for seat in seats:
