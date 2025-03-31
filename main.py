@@ -110,7 +110,7 @@ def main():
             server_monitor.error(e)
 
         server_monitor.tick()
-        random_number = random.randint(10, 15)
+        random_number = random.randint(5, 7)
         time.sleep(random_number)
 
 

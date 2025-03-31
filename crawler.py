@@ -49,23 +49,19 @@ def get_train_schedules(
         driver.find_element(By.ID, 'arvRsStnCdNm').send_keys(arr)  # 도착역 입력
 
         dt_options: List[WebElement] = driver.find_elements(By.XPATH, '//*[@id="dptDt"]/option')
-        dt_found = False
         for option in dt_options:
             if option.get_attribute('value') == dep_date:
                 option.click()
-                dt_found = True
                 break
-        if not dt_found:
+        else:
             raise ValueError('출발 날짜를 찾을 수 없습니다.')
 
         dt_options: List[WebElement] = driver.find_elements(By.XPATH, '//*[@id="dptTm"]/option')
-        dt_found = False
         for option in dt_options:
             if option.get_attribute('value') == dep_time:
                 option.click()
-                dt_found = True
                 break
-        if not dt_found:
+        else:
             raise ValueError('출발 시간을 찾을 수 없습니다.')
 
         driver.find_element(By.XPATH, '//*[@id="search_top_tag"]/input').click()  # 기차표 조회
@@ -73,6 +69,7 @@ def get_train_schedules(
         available_seats = []
 
         seats = driver.find_elements(By.XPATH, '//*[@id="result-form"]/fieldset/div[6]/table/tbody/tr')
+        logger.debug(f"searched seats: {len(seats)}")
         for seat in seats:
             departure_time = seat.find_element(By.XPATH, 'td[4]').text.replace("\n", ' ')
             seat_button = seat.find_element(By.XPATH, 'td[7]/a').text
