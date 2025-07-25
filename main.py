@@ -83,13 +83,15 @@ def main():
     while True:
         dates = os.getenv('FLIGHT_SCHEDULE_DATE').split(',') # 20250401,20250402
         times = os.getenv('FLIGHT_SCHEDULE_TIME').split(',') # 000000, 140000
+        dep = os.getenv('FLIGHT_SCHEDULE_DEP', '대전')
+        arr = os.getenv('FLIGHT_SCHEDULE_ARR', '수서')
 
         schedules_map = dict()
         try:
             for date, t in zip(dates, times):
                 schedules = get_train_schedules(
-                    dep='대전',
-                    arr='수서',
+                    dep=dep,
+                    arr=arr,
                     dep_date=date,
                     dep_time=t,
                 )
