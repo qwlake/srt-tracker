@@ -85,6 +85,7 @@ def main():
         times = os.getenv('FLIGHT_SCHEDULE_TIME').split(',') # 000000, 140000
         dep = os.getenv('FLIGHT_SCHEDULE_DEP', '대전')
         arr = os.getenv('FLIGHT_SCHEDULE_ARR', '수서')
+        cnt_adult = os.getenv('COUNT_ADULT', '1')
 
         schedules_map = dict()
         try:
@@ -94,6 +95,7 @@ def main():
                     arr=arr,
                     dep_date=date,
                     dep_time=t,
+                    cnt_adult=cnt_adult,
                 )
                 if schedules:
                     schedules_map[date, t] = schedules

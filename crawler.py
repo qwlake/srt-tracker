@@ -40,6 +40,7 @@ def get_train_schedules(
         arr = '수서',
         dep_date = '20250401',
         dep_time = '140000',
+        cnt_adult = '2',
 ):
     driver = get_driver(url)
 
@@ -69,6 +70,14 @@ def get_train_schedules(
                 break
         else:
             raise ValueError('출발 시간을 찾을 수 없습니다.')
+
+        dt_options: List[WebElement] = driver.find_elements(By.XPATH, '//*[@id="psgInfoPerPrnb1"]/option')
+        for option in dt_options:
+            if option.get_attribute('value') == cnt_adult:
+                option.click()
+                break
+        else:
+            raise ValueError('성인 인원 선택창을 찾을 수 없습니다.')
 
         driver.find_element(By.XPATH, '//*[@id="search_top_tag"]/input').click()  # 기차표 조회
 
