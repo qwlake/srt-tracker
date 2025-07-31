@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from selenium.webdriver.support import expected_conditions as EC
 from typing import List
 
@@ -11,6 +13,22 @@ from selenium.webdriver.support.wait import WebDriverWait
 from log import logger
 
 load_dotenv()
+
+
+class TrainSchedule:
+    def __init__(self, seat_type, departure_location, departure_time):
+        self.seat_type: str = seat_type
+        self.departure_location: str = departure_location
+        self.departure_time: datetime = departure_time
+
+    def __hash__(self):
+        return hash(self.__str__())
+
+    def __eq__(self, other):
+        return self.__str__() == other.__str__()
+
+    def __str__(self):
+        return self.departure_location + " " + self.departure_time.strftime("%Y%m%d %H:%M") + " " + self.seat_type
 
 
 def get_driver(url):
@@ -41,7 +59,7 @@ def get_train_schedules(
         dep_date = '20250401',
         dep_time = '140000',
         cnt_adult = '2',
-):
+) -> list[TrainSchedule]:
     driver = get_driver(url)
 
     try:
@@ -89,25 +107,32 @@ def get_train_schedules(
         seats = driver.find_elements(By.XPATH, '//*[@id="result-form"]/fieldset/div[6]/table/tbody/tr')
         logger.debug(f"searched seats: {len(seats)}")
         for seat in seats:
-            departure_time = seat.find_element(By.XPATH, 'td[4]').text.replace("\n", ' ')
+            dep_location, _dep_time = seat.find_element(By.XPATH, 'td[4]').text.strip("\n").split('\n')
+            dep_time = datetime.strptime(dep_date + ' ' + _dep_time, "%Y%m%d %H:%M")
             seat_button = seat.find_element(By.XPATH, 'td[7]/a').text
             if seat_button != '매진':
-                available_seats.append({
-                    'seat_type': '일반실',
-                    'departure_time': departure_time.strip("\n"),
-                })
+                available_seats.append(
+                    TrainSchedule(
+                        seat_type = '일반실',
+                        departure_location = dep_location,
+                        departure_time = dep_time,
+                    )
+                )
             seat_button = seat.find_element(By.XPATH, 'td[6]/a').text
             if seat_button != '매진':
-                available_seats.append({
-                    'seat_type': '특실',
-                    'departure_time': departure_time.strip("\n"),
-                })
+                available_seats.append(
+                    TrainSchedule(
+                        seat_type = '특실',
+                        departure_location = dep_location,
+                        departure_time = dep_time,
+                    )
+                )
 
         return available_seats
 
 
-    except:
-        logger.error('Error occurred while fetching train schedules')
+    except Exception as e:
+        logger.error('Error occurred while fetching train schedules', e)
         return []
 
     finally:

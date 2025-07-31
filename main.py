@@ -6,12 +6,13 @@ from datetime import datetime, timezone, timedelta
 
 from dotenv import load_dotenv
 
-from crawler import get_train_schedules
+from crawler import get_train_schedules, TrainSchedule
 from log import logger
 from slack import send_slack_webhook
 
 load_dotenv()
 timezone_KST = timezone(timedelta(hours=9))
+departure_time_options = '000000', '020000', '040000', '060000', '080000', '100000', '120000', '140000', '160000', '180000', '200000', '220000'
 
 class ServerStatusMonitor:
     def __init__(self, dt, status_webhook_url, server_name):
@@ -73,6 +74,16 @@ class Message:
         return f'{print_text}\n{current_time}'
 
 
+def get_search_times(start_time: datetime, end_time: datetime) -> list[str]:
+    times = []
+    start_time_str = start_time.strftime('%H%M') + '00'
+    end_time_str = end_time.strftime('%H%M') + '00'
+    for departure_time_option in departure_time_options:
+        if start_time_str <= departure_time_option <= end_time_str:
+            times.append(departure_time_option)
+    return times
+
+
 def main():
     webhook_url = os.getenv('SLACK_WEBHOOK_URL')
     status_webhook_url = os.getenv('SLACK_STATUS_WEBHOOK_URL')
@@ -81,31 +92,37 @@ def main():
     server_monitor = ServerStatusMonitor(datetime.now(), status_webhook_url, server_name)
 
     while True:
-        dates = os.getenv('FLIGHT_SCHEDULE_DATE').split(',') # 20250401,20250402
-        times = os.getenv('FLIGHT_SCHEDULE_TIME').split(',') # 000000, 140000
+        date = os.getenv('FLIGHT_SCHEDULE_DATE') # 20250401
+        start_time_hour = os.getenv('FLIGHT_SCHEDULE_TIME_START_HOUR') # 13
+        start_time_minute = os.getenv('FLIGHT_SCHEDULE_TIME_START_MINUTE', '00')
+        end_time_hour = os.getenv('FLIGHT_SCHEDULE_TIME_END_HOUR') # 15
+        end_time_minute = os.getenv('FLIGHT_SCHEDULE_TIME_END_MINUTE', '00')
         dep = os.getenv('FLIGHT_SCHEDULE_DEP', '대전')
         arr = os.getenv('FLIGHT_SCHEDULE_ARR', '수서')
         cnt_adult = os.getenv('COUNT_ADULT', '1')
 
-        schedules_map = dict()
+        start_time = datetime.strptime(date + ' ' + start_time_hour + ':' + start_time_minute, '%Y%m%d %H:%M')
+        end_time = datetime.strptime(date + ' ' + end_time_hour + ':' + end_time_minute, '%Y%m%d %H:%M')
+        times = get_search_times(start_time, end_time)
+
+        schedules_set = set()
         try:
-            for date, t in zip(dates, times):
-                schedules = get_train_schedules(
+            for t in times:
+                schedules: list[TrainSchedule] = get_train_schedules(
                     dep=dep,
                     arr=arr,
                     dep_date=date,
                     dep_time=t,
                     cnt_adult=cnt_adult,
                 )
-                if schedules:
-                    schedules_map[date, t] = schedules
+                for schedule in schedules:
+                    if start_time <= schedule.departure_time <= end_time:
+                        schedules_set.add(schedule)
 
-            for (date, t), schedules in schedules_map.items():
-                formated_date = datetime.strptime(date, '%Y%m%d').strftime('%m-%d')
-                message_container.append_text("\n".join([
-                    f"{formated_date}\n*Dep:* {schedule['departure_time']} - *Class:* {schedule['seat_type']}\n"
-                    for schedule in schedules
-                ]))
+            message_container.append_text("\n".join([
+                f"*Dep:* {schedule.departure_location} {schedule.departure_time.strftime('%m-%d %H:%M')} - *Class:* {schedule.seat_type}\n"
+                for schedule in schedules_set
+            ]))
 
             message_container.send_message()
             message_container.rotate()
